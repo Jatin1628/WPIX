@@ -32,6 +32,8 @@ import com.surendramaran.yolov9tflite.Constants.LABELS_PATH
 import com.surendramaran.yolov9tflite.Constants.MODEL_PATH
 import com.surendramaran.yolov9tflite.feedback.DetectionFeedbackViewModel
 import com.surendramaran.yolov9tflite.camera.CameraConnectionActivity
+import com.surendramaran.yolov9tflite.camera.DeviceConnectionActivity
+import com.surendramaran.yolov9tflite.ocr.OCRActivity
 import com.surendramaran.yolov9tflite.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -102,7 +104,7 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
         bindVoiceUi()
 
         binding.connectToCameraButton.setOnClickListener {
-            startActivity(Intent(this, CameraConnectionActivity::class.java))
+            startActivity(Intent(this, DeviceConnectionActivity::class.java))
         }
 
         feedbackViewModel = ViewModelProvider(this)[DetectionFeedbackViewModel::class.java]
@@ -217,6 +219,10 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
                 } else {
                     buttonView.setBackgroundColor(ContextCompat.getColor(baseContext, R.color.gray))
                 }
+            }
+
+            readTextButton.setOnClickListener {
+                startOCR()
             }
         }
     }
@@ -372,19 +378,7 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
     }
 
     private fun startOCR() {
-        if (ocrRunning) return
-        ocrRunning = true
-        toast("Starting OCR (stub)...")
-        binding.voiceCommandText.text = "OCR started (stub)"
-
-        ocrRunnable?.let { mainHandler.removeCallbacks(it) }
-        val runnable = Runnable {
-            ocrRunning = false
-            binding.voiceCommandText.text = "OCR done (stub)"
-            toast("OCR complete (stub)")
-        }
-        ocrRunnable = runnable
-        mainHandler.postDelayed(runnable, 2500L)
+        startActivity(Intent(this, OCRActivity::class.java))
     }
 
     private fun stopOCR() {

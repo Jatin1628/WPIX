@@ -7,6 +7,13 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Required for online speech recognition (depending on device speech service). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Bluetooth permissions -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Wifi permissions -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 
     <application
         android:allowBackup="true"
@@ -30,6 +37,14 @@
 
         <activity
             android:name=".camera.CameraConnectionActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".camera.DeviceConnectionActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ocr.OCRActivity"
             android:exported="false" />
     </application>
 

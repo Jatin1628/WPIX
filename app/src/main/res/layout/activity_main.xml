@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
-
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -9,136 +8,163 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <!-- Control Panel Container at the top -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/controlPanel"
+    <!-- Header with Title and Speed -->
+    <LinearLayout
+        android:id="@+id/headerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/black"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <TextView
             android:id="@+id/title_text"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textColor="@color/white"
-            android:layout_margin="32dp"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/yolov9_object_detect"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <Button
-            android:id="@+id/connectToCameraButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:text="Connect to Camera"
-            android:translationZ="10dp"
-            app:layout_constraintTop_toBottomOf="@id/title_text"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/speedContainer" />
-
-        <TextView
-            android:id="@+id/voiceCommandText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:textColor="@color/white"
-            android:text="Voice command: (stopped)"
-            android:translationZ="10dp"
-            app:layout_constraintTop_toBottomOf="@id/connectToCameraButton"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/speedContainer"
-            android:layout_marginTop="8dp" />
-
-        <Button
-            android:id="@+id/voiceButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:layout_marginTop="8dp"
-            android:text="Start Voice"
-            android:translationZ="10dp"
-            app:layout_constraintTop_toBottomOf="@id/voiceCommandText"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/speedContainer" />
-
-        <Button
-            android:id="@+id/walkingModeButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:layout_marginTop="8dp"
-            android:text="Start Walking Mode"
-            android:translationZ="10dp"
-            app:layout_constraintTop_toBottomOf="@id/voiceButton"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/speedContainer" />
-
-        <TextView
-            android:id="@+id/detectionSummaryText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="32dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="16dp"
-            android:textColor="@color/white"
-            android:text="Moving: 0, Stationary: 0"
-            android:translationZ="10dp"
-            app:layout_constraintTop_toBottomOf="@id/walkingModeButton"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/speedContainer"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            android:layout_weight="1"
+            android:text="@string/yolov9_object_detect" />
 
         <LinearLayout
-            android:id="@+id/speedContainer"
-            android:layout_margin="32dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <TextView
-                android:layout_marginEnd="8dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
-                android:text="Speed:" />
+                android:text="Speed:"
+                android:layout_marginEnd="4dp" />
 
             <TextView
                 android:id="@+id/inferenceTime"
-                android:layout_width="72dp"
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
-                tools:text="100000ms" />
+                android:textSize="12sp"
+                tools:text="100ms" />
         </LinearLayout>
+    </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- Voice Command Status -->
+    <TextView
+        android:id="@+id/voiceCommandText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:text="Voice command: (stopped)"
+        android:paddingVertical="4dp"
+        app:layout_constraintTop_toBottomOf="@id/headerLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Camera View and Overlay - positioned below control panel -->
+    <!-- Detection Summary -->
+    <TextView
+        android:id="@+id/detectionSummaryText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:text="Moving: 0, Stationary: 0"
+        android:paddingVertical="4dp"
+        app:layout_constraintTop_toBottomOf="@id/voiceCommandText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Connect to Camera Button (Above Camera) -->
+    <Button
+        android:id="@+id/connectToCameraButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Connect to Camera"
+        android:translationZ="10dp"
+        app:layout_constraintTop_toBottomOf="@id/detectionSummaryText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp" />
+
+    <!-- Camera View -->
     <androidx.camera.view.PreviewView
         android:id="@+id/view_finder"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/controlPanel"
-        app:layout_constraintBottom_toTopOf="@id/gpuToggleContainer"
+        app:layout_constraintTop_toBottomOf="@id/connectToCameraButton"
+        app:layout_constraintBottom_toTopOf="@id/bottomButtonsContainer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:scaleType="fillStart" />
+        android:layout_margin="8dp"
+        app:scaleType="fillCenter" />
 
+    <!-- Overlay View -->
     <com.surendramaran.yolov9tflite.OverlayView
         android:id="@+id/overlay"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:translationZ="5dp"
-        app:layout_constraintTop_toBottomOf="@id/controlPanel"
+        app:layout_constraintTop_toBottomOf="@id/connectToCameraButton"
+        app:layout_constraintBottom_toTopOf="@id/bottomButtonsContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="8dp" />
+
+    <!-- Bottom Buttons Container (3 Buttons) -->
+    <LinearLayout
+        android:id="@+id/bottomButtonsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
         app:layout_constraintBottom_toTopOf="@id/gpuToggleContainer"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- First Row: Voice and Walking Mode -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:spacing="8dp"
+            android:layout_marginBottom="8dp">
+
+            <Button
+                android:id="@+id/voiceButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Start Voice"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/walkingModeButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Start Walking Mode"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+
+        <!-- Second Row: Read Text -->
+        <Button
+            android:id="@+id/readTextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Read Text" />
+    </LinearLayout>
 
     <!-- GPU Toggle at the bottom -->
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -167,8 +193,4 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!--    <ImageView-->
-    <!--        android:id="@+id/ivTop"-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="match_parent"/>-->
 </androidx.constraintlayout.widget.ConstraintLayout>
