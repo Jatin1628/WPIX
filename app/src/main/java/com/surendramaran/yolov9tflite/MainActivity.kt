@@ -1,9 +1,12 @@
 package com.surendramaran.yolov9tflite
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -22,10 +25,16 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModelProvider
+import com.surendramaran.yolov9tflite.voice.VoiceCommandType
+import com.surendramaran.yolov9tflite.voice.VoiceCommandViewModel
 import com.surendramaran.yolov9tflite.Constants.LABELS_PATH
 import com.surendramaran.yolov9tflite.Constants.MODEL_PATH
+import com.surendramaran.yolov9tflite.feedback.DetectionFeedbackViewModel
+import com.surendramaran.yolov9tflite.camera.CameraConnectionActivity
 import com.surendramaran.yolov9tflite.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -48,6 +57,26 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
     private var ttsReady = false
     private var lastSpokenLabelSignature: String? = null
 
+    private lateinit var voiceViewModel: VoiceCommandViewModel
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var ocrRunning = false
+    private var ocrRunnable: Runnable? = null
+
+    private var lastBoundingBoxes: List<BoundingBox> = emptyList()
+
+    private val requestAudioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            voiceViewModel.startListening()
+        } else {
+            toast("Microphone permission denied. Enable it to use voice commands.")
+        }
+    }
+
+    private lateinit var feedbackViewModel: DetectionFeedbackViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -69,6 +98,17 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
             }
         }
 
+        voiceViewModel = ViewModelProvider(this)[VoiceCommandViewModel::class.java]
+        bindVoiceUi()
+
+        binding.connectToCameraButton.setOnClickListener {
+            startActivity(Intent(this, CameraConnectionActivity::class.java))
+        }
+
+        feedbackViewModel = ViewModelProvider(this)[DetectionFeedbackViewModel::class.java]
+        bindFeedbackUi()
+        observeSpeechQueue()
+
         cameraExecutor.execute {
             detector = Detector(baseContext, MODEL_PATH, LABELS_PATH, this) {
                 toast(it)
@@ -82,6 +122,88 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
         }
 
         bindListeners()
+    }
+
+    private fun bindFeedbackUi() {
+        binding.walkingModeButton.setOnClickListener {
+            feedbackViewModel.toggleWalkingMode()
+        }
+
+        lifecycleScope.launch {
+            feedbackViewModel.walkingModeButtonText.collectLatest { text ->
+                binding.walkingModeButton.text = text
+            }
+        }
+
+        lifecycleScope.launch {
+            feedbackViewModel.uiSummary.collectLatest { summary ->
+                binding.detectionSummaryText.text = summary
+            }
+        }
+    }
+
+    private fun observeSpeechQueue() {
+        lifecycleScope.launch {
+            feedbackViewModel.speechEvents.collectLatest { phrase ->
+                if (!ttsReady) return@collectLatest
+                // SpeechManager already handles gap + cooldown, so we just speak sequentially.
+                textToSpeech?.speak(
+                    phrase,
+                    TextToSpeech.QUEUE_ADD,
+                    null,
+                    "feedback"
+                )
+            }
+        }
+    }
+
+    private fun bindVoiceUi() {
+        binding.voiceButton.setOnClickListener {
+            val currentlyListening = voiceViewModel.isListening.value == true
+            if (currentlyListening) {
+                stopAnyOngoingProcessing()
+                voiceViewModel.stopListening()
+            } else {
+                val granted = ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+                if (granted) {
+                    voiceViewModel.startListening()
+                } else {
+                    requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            }
+        }
+
+        voiceViewModel.isListening.observe(this) { isListening ->
+            binding.voiceButton.text = if (isListening) "Stop Voice" else "Start Voice"
+        }
+
+        voiceViewModel.commandText.observe(this) { text ->
+            // Keep this text as the main UI indicator for recognized commands/errors.
+            binding.voiceCommandText.text = text
+        }
+
+        voiceViewModel.errorText.observe(this) { error ->
+            if (error.isNullOrBlank()) return@observe
+            toast(error)
+        }
+
+        voiceViewModel.commandEvent.observe(this) { event ->
+            val command = event.getContentIfNotHandled() ?: return@observe
+            when (command) {
+                VoiceCommandType.WhatsInFront -> detectObjects()
+                VoiceCommandType.ReadText -> startOCR()
+                VoiceCommandType.Stop -> {
+                    stopAnyOngoingProcessing()
+                    voiceViewModel.stopListening()
+                }
+                is VoiceCommandType.Unknown -> {
+                    // No action; ViewModel already updates UI text.
+                }
+            }
+        }
     }
 
     private fun bindListeners() {
@@ -188,6 +310,10 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopAnyOngoingProcessing()
+        if (::voiceViewModel.isInitialized) {
+            voiceViewModel.stopListening()
+        }
         textToSpeech?.stop()
         textToSpeech?.shutdown()
         textToSpeech = null
@@ -222,14 +348,58 @@ class MainActivity : AppCompatActivity(), Detector.DetectorListener {
     }
 
     override fun onDetect(boundingBoxes: List<BoundingBox>, inferenceTime: Long) {
+        lastBoundingBoxes = boundingBoxes
         runOnUiThread {
             binding.inferenceTime.text = "${inferenceTime}ms"
             binding.overlay.apply {
                 setResults(boundingBoxes)
                 invalidate()
             }
-            announceDetections(boundingBoxes)
         }
+
+        // Send detections to intelligent feedback system (speech filtering happens in ViewModel).
+        feedbackViewModel.onDetections(boundingBoxes)
+    }
+
+    private fun detectObjects() {
+        val boxes = lastBoundingBoxes
+        if (boxes.isEmpty()) {
+            toast("No objects detected yet")
+            return
+        }
+        // Force speech even if the same objects are already announced recently.
+        feedbackViewModel.onDetections(boxes, forceAnnounce = true)
+    }
+
+    private fun startOCR() {
+        if (ocrRunning) return
+        ocrRunning = true
+        toast("Starting OCR (stub)...")
+        binding.voiceCommandText.text = "OCR started (stub)"
+
+        ocrRunnable?.let { mainHandler.removeCallbacks(it) }
+        val runnable = Runnable {
+            ocrRunning = false
+            binding.voiceCommandText.text = "OCR done (stub)"
+            toast("OCR complete (stub)")
+        }
+        ocrRunnable = runnable
+        mainHandler.postDelayed(runnable, 2500L)
+    }
+
+    private fun stopOCR() {
+        if (!ocrRunning) return
+        ocrRunning = false
+        ocrRunnable?.let { mainHandler.removeCallbacks(it) }
+        ocrRunnable = null
+        toast("OCR stopped")
+    }
+
+    private fun stopAnyOngoingProcessing() {
+        stopOCR()
+        // Stop any ongoing TTS quickly; voice recognition stop is handled via ViewModel.
+        textToSpeech?.stop()
+        feedbackViewModel.stopAllSpeech()
     }
 
     private fun announceDetections(boundingBoxes: List<BoundingBox>) {
